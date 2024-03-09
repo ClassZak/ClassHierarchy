@@ -1,6 +1,7 @@
 ﻿using System;
 using System.CodeDom;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,13 +12,17 @@ namespace ClassHierarchy
     {
         public abstract override string ToString();
         public abstract override int GetHashCode();
-        public abstract override bool Equals(object o);
+        public abstract override bool Equals(object obj);
     }
 
     #region Class Color
     class Color
     {
-        UInt32 ColorCode;
+        public override int GetHashCode()
+        {
+            throw new NotImplementedException();
+        }
+        public UInt32 ColorCode { get; set; }
         public byte A
         {
             get
@@ -75,6 +80,17 @@ namespace ClassHierarchy
             ColorCode = 0xFF000000 +  (UInt32)(R << 16) + (UInt32)(G << 8) + B;
         }
         public Color(byte A, byte R, byte G, byte B) { ColorCode = (UInt32)A << 24 + (R << 16) + (G << 8) + B; }
+
+
+
+        public override bool Equals(object obj)
+        {
+            object compareObj = obj as Color;
+            if (compareObj == null)
+                throw new ArgumentException("Wrong type!");
+            else
+                return this.ColorCode == ((Color)(compareObj)).ColorCode;
+        }
     }
     #endregion
     #region Point Classes
@@ -235,7 +251,7 @@ namespace ClassHierarchy
 
         public override string ToString()
         {
-            return $"Point\nX:{X}\tY:{Y}\tColor:{Color}";
+            return $"ColorPoint\nX:{X}\tY:{Y}\tColor:{Color}";
         }
         public override bool Equals(object point)
         {
@@ -263,7 +279,6 @@ namespace ClassHierarchy
         }
     }
     #endregion
-
     #region Line Classes
     class Line : ShapeI
     {
@@ -281,8 +296,7 @@ namespace ClassHierarchy
         #region Constructors
         public Line()
         {
-            this.Point1= new Point();
-            this.Point2= new Point();
+            InitPoints();
         }
         public Line(double X1,double Y1,double X2,double Y2)
         {
@@ -301,6 +315,11 @@ namespace ClassHierarchy
         {
             this.Point1 = point1;
             this.Point2 = point2;
+        }
+        protected void InitPoints()
+        {
+            this.Point1 = new Point();
+            this.Point2 = new Point();
         }
         #endregion
         #region Base Methods
@@ -356,9 +375,218 @@ namespace ClassHierarchy
     class ColorLine : Line
     {
         public Color Color { get; set; }
+        #region Constructors
+        public ColorLine()
+        {
+            base.InitPoints();
+            Color = new Color();
+        }
+        public ColorLine(Color color)
+        {
+            base.InitPoints();
+            Color = color;
+        }
+        public ColorLine(Line line)
+        {
+            this.Point1=line.Point1;
+            this.Point2=line.Point2;
+            Color=new Color();
+        }
+        public ColorLine(Line line, Color color)
+        {
+            this.Point1= line.Point1;
+            this.Point2=line.Point2;
+            Color=color;
+        }
+        public ColorLine(Point point1,Point point2)
+        {
+            this.Point1= point1;
+            this.Point2= point2;
+            Color=new Color();
+        }
+        public ColorLine(Point point1,Point point2 ,Color color)
+        {
+            this.Point1= point1;
+            this.Point2= point2;
+            Color=color;
+        }
+        public ColorLine(double X1, double Y1, double X2, double Y2)
+        {
+            Color=new Color();
+            this.Point1 = new Point(X1,Y1);
+            this.Point2 = new Point(X2,Y2);
+        }
+        public ColorLine(double X1,double Y1,double X2,double Y2 ,Color color)
+        {
+            this.Point1= new Point(X1,Y1);
+            this.Point2= new Point(X2,Y2);
+            Color=color;
+        }
+        #endregion
+        #region Base Methods
+        public override string ToString()
+        {
+            return "ColorLine\n" + Point1.ToString() + "\n" + Point2.ToString()+"\n"+Color.ToString();
+        }
+        public override bool Equals(object o)
+        {
+            object compareObj = o as ColorLine;
+            if (compareObj == null)
+            {
+                if(o as Line == null)
+                throw new ArgumentException("Wrong type!");
+                else
+                    return this.Point1 == ((Line)(compareObj)).Point1 && this.Point1 == ((Line)(compareObj)).Point1;
+            }
+            else
+                return this.Point1 == ((ColorLine)(compareObj)).Point1 && this.Point1 == ((ColorLine)(compareObj)).Point1 && this.Color== ((ColorLine)(compareObj)).Color;
+        }
+        public override int GetHashCode()
+        {
+            throw new NotImplementedException();
+        }
+        #endregion
+        #region Operators
+        static public bool operator==(ColorLine a, ColorLine b)
+        {
+            return a.Equals(b);
+        }
+        static public bool operator!=(ColorLine a, ColorLine b)
+        {
+            return !a.Equals(b);
+        }
+        static public bool operator ==(ColorLine a, Line b)
+        {
+            return a.Equals(b);
+        }
+        static public bool operator !=(ColorLine a, Line b)
+        {
+            return !a.Equals(b);
+        }
+
+
+
+
+
+        static public ColorLine operator-(ColorLine a, ColorLine b)
+        {
+            return
+                new ColorLine
+                (
+                    a.Point1 - b.Point1,
+                    a.Point2 - b.Point2
+                );
+        }
+        static public ColorLine operator +(ColorLine a, ColorLine b)
+        {
+            return
+                new ColorLine
+                (
+                    a.Point1 + b.Point1,
+                    a.Point2 + b.Point2
+                );
+        }
+
+
+        static public ColorLine operator -(ColorLine a, Line b)
+        {
+            return
+                new ColorLine
+                (
+                    a.Point1 - b.Point1,
+                    a.Point2 - b.Point2
+                );
+        }
+        static public ColorLine operator +(ColorLine a, Line b)
+        {
+            return
+                new ColorLine
+                (
+                    a.Point1 + b.Point1,
+                    a.Point2 + b.Point2
+                );
+        }
+        #endregion
     }
     #endregion
+    class Polygon : ShapeI
+    {
+        public List<Point> Points;
+        #region Constructors
+        public Polygon()
+        {
 
+        }
+        public Polygon(params Point[] point)
+        {
+            foreach(Point p in point)
+                Points.Add(p);
+        }
+        #endregion
+        #region Base methods
+        public override string ToString()
+        {
+            string result="Polygon:\n";
+            for(int i=0;i!=this.Points.Count;++i)
+                result += Points.ElementAt<Point>(i).ToString();
+            return result;
+        }
+        public override int GetHashCode()
+        {
+            throw new NotImplementedException();
+        }
+        public override bool Equals(object obj)
+        {
+            if (!(obj is Polygon compareObj))
+                throw new ArgumentException("Wrong type!");
+            else
+            {
+                if (this.Points.Count != compareObj.Points.Count)
+                    return false;
+
+                bool equal = true;
+                for (int i = 0, j = 0; i != this.Points.Count; ++i, ++j)
+                {
+                    if (this.Points.ElementAt<Point>(i)!=(compareObj.Points.ElementAt<Point>(j)))
+                    {
+                        equal = false;
+                        break;
+                    }
+                }
+                return equal;
+            }
+        }
+
+        #endregion
+        #region Operators
+        public static bool operator==(Polygon a, Polygon b)
+        {
+            return a.Equals(b);
+        }
+        public static bool operator !=(Polygon a, Polygon b)
+        {
+            return !a.Equals(b);
+        }
+        #endregion
+        void MoveX(double x)
+        {
+            foreach (var point in this.Points)
+                point.X += x;
+        }
+        void MoveY(double y)
+        {
+            foreach (var point in this.Points)
+                point.Y += y;
+        }
+        void MoveXY(double x,double y)
+        {
+            foreach (var point in this.Points)
+            {
+                point.X += x;
+                point.Y += y;
+            }
+        }
+    }
 
 
     internal class Program
