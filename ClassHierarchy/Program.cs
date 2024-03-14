@@ -3,6 +3,7 @@ using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -69,7 +70,7 @@ namespace ClassHierarchy
         }
         public override string  ToString()
         {
-            return $"Color\nA:{A}\tR:{R}\tG:{G}\tB:{B}";
+            return $"Color\tA:{A}\tR:{R}\tG:{G}\tB:{B}";
         }
 
 
@@ -151,7 +152,7 @@ namespace ClassHierarchy
 
         public override string ToString()
         {
-            return $"Point\nX:{X}\tY:{Y}";
+            return $"Point\tX:{X}\tY:{Y}";
         }
         public override int GetHashCode()
         {
@@ -171,6 +172,12 @@ namespace ClassHierarchy
             this.X = x;
             this.Y = y;
             InitilizeColor();
+        }
+        public ColorPoint(Point point,Color color)
+        {
+            this.X=point.X;
+            this.Y=point.Y;
+            this.Color= color;
         }
         public ColorPoint(double x,double y,Color color)
         {
@@ -251,7 +258,7 @@ namespace ClassHierarchy
 
         public override string ToString()
         {
-            return $"ColorPoint\nX:{X}\tY:{Y}\tColor:{Color}";
+            return $"ColorPoint\tX:{X}\tY:{Y}\tColor:{Color}";
         }
         public override bool Equals(object point)
         {
@@ -300,19 +307,19 @@ namespace ClassHierarchy
         }
         public Line(double X1,double Y1,double X2,double Y2)
         {
+            InitPoints();
             this.Point1.X = X1;this.Point1.Y = Y1;
             this.Point2.X = X2; this.Point2.Y = Y2;
         }
-        public Line(ref Line line)
+        public Line(Line line)
         {
-            if(line!=this)
-            {
-                this.Point1 = new Point(line.Point1);
-                this.Point2 = new Point(line.Point2);
-            }
+            InitPoints();
+            this.Point1 = new Point(line.Point1);
+            this.Point2 = new Point(line.Point2);
         }
         public Line(Point point1, Point point2) 
         {
+            InitPoints();
             this.Point1 = point1;
             this.Point2 = point2;
         }
@@ -422,6 +429,12 @@ namespace ClassHierarchy
             this.Point2= new Point(X2,Y2);
             Color=color;
         }
+        public ColorLine(ColorLine colorLine)
+        {
+            this.Point1= colorLine.Point1;
+            this.Point2= colorLine.Point2;
+            this.Color=colorLine.Color;
+        }
         #endregion
         #region Base Methods
         public override string ToString()
@@ -515,12 +528,35 @@ namespace ClassHierarchy
         #region Constructors
         public Polygon()
         {
-
+            Points=new List<Point>();
         }
-        public Polygon(params Point[] point)
+        public Polygon(params object[] point)
         {
-            foreach(Point p in point)
-                Points.Add(p);
+            Points = new List<Point>();
+            foreach(object e in point)
+            {
+                if(e.GetType()==typeof(Point))
+                Points.Add(new Point((Point)e));
+                else if(e is ColorPoint)
+                Points.Add(new Point(((ColorPoint)e).X, ((ColorPoint)e).Y));
+                else if(e is Line)
+                {
+                    Points.Add(new Point(((Line)e).Point1)); 
+                    Points.Add(new Point(((Line)e).Point2));
+                }
+                else if (e is ColorLine)
+                {
+                    Points.Add(new Point(((ColorLine)e).Point1));
+                    Points.Add(new Point(((ColorLine)e).Point2));
+                }
+            }
+                
+        }
+        public Polygon(Polygon polygon)
+        {
+            Points = new List<Point>();
+            foreach (Point p in polygon.Points)
+                this.Points.Add(p);
         }
         #endregion
         #region Base methods
@@ -528,7 +564,7 @@ namespace ClassHierarchy
         {
             string result="Polygon:\n";
             for(int i=0;i!=this.Points.Count;++i)
-                result += Points.ElementAt<Point>(i).ToString();
+                result += Points.ElementAt<Point>(i).ToString()+"\n";
             return result;
         }
         public override int GetHashCode()
@@ -568,17 +604,17 @@ namespace ClassHierarchy
             return !a.Equals(b);
         }
         #endregion
-        void MoveX(double x)
+        public void MoveOffX(double x)
         {
             foreach (var point in this.Points)
                 point.X += x;
         }
-        void MoveY(double y)
+        public void MoveOffY(double y)
         {
             foreach (var point in this.Points)
                 point.Y += y;
         }
-        void MoveXY(double x,double y)
+        public void MoveOffXY(double x,double y)
         {
             foreach (var point in this.Points)
             {
@@ -591,9 +627,8 @@ namespace ClassHierarchy
 
     internal class Program
     {
-        static void Main(string[] args)
+        static void CheckColor()
         {
-            
             Color color = new Color(90,150,200);
             Console.WriteLine(color.ToString());
             color.A = 15;
@@ -604,6 +639,49 @@ namespace ClassHierarchy
             Console.WriteLine(color.ToString());
             color.B = 225;
             Console.WriteLine(color.ToString());
+        }
+        static void Main(string[] args)
+        {
+            CheckColor();
+            Console.WriteLine();
+
+
+
+            List<ShapeI> shapes = new List<ShapeI>();
+            shapes.Add(new Point());
+            shapes.Add(new Point(1,2));
+            shapes.Add(new Point((Point)shapes.ElementAt(shapes.Count-1)));
+
+            shapes.Add(new ColorPoint());
+            shapes.Add(new ColorPoint(5,10));
+            shapes.Add(new ColorPoint((Point)shapes.ElementAt(1)));
+            shapes.Add(new ColorPoint(5, 10,new Color(123,45,11)));
+            shapes.Add(new ColorPoint((Point)shapes.ElementAt(1),new Color(55,90,2)));
+            shapes.Add(new ColorPoint((ColorPoint)shapes.ElementAt(shapes.Count - 1)));
+
+            shapes.Add(new Line());
+            shapes.Add(new Line(0, 1, 15, 47));
+            shapes.Add(new Line((Line)shapes.ElementAt(shapes.Count - 1)));
+            shapes.Add(new Line((Point)shapes.ElementAt(1), (Point)shapes.ElementAt(1)*2));
+
+            shapes.Add(new ColorLine());
+            shapes.Add(new ColorLine(new Color(255,255,128)));
+            shapes.Add(new ColorLine(19,120,99,77));
+            shapes.Add(new ColorLine((Line)shapes.ElementAt(shapes.Count - 6)));
+            shapes.Add(new ColorLine((Line)shapes.ElementAt(shapes.Count - 6), new Color(70, 80, 90)));
+            shapes.Add(new ColorLine((Point)shapes.ElementAt(1), (Point)shapes.ElementAt(1) * 2));
+            shapes.Add(new ColorLine((Point)shapes.ElementAt(1) * 4, (Point)shapes.ElementAt(1) / 5, new Color(0, 0, 0)));
+            shapes.Add(new ColorLine(19, 120, 99, 77, new Color(7, 8, 9)));
+            shapes.Add(new ColorLine((ColorLine)shapes.ElementAt(shapes.Count - 1)));
+
+            shapes.Add(new Polygon());
+            shapes.Add(new Polygon((Point)shapes.ElementAt(0), (Point)shapes.ElementAt(1), (ColorLine)shapes.ElementAt(shapes.Count-3), (Line)shapes.ElementAt(10)));
+            shapes.Add(new Polygon((Polygon)shapes.ElementAt(shapes.Count-1)));
+
+
+            foreach (var shape in shapes)
+                Console.WriteLine(shape);
+
 
 
 
